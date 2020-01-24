@@ -1,5 +1,5 @@
 /*
-Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors MS per Origin-Destination 
+Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination 
 */
 
 -- WeeklyReport shows info from current week - 1
