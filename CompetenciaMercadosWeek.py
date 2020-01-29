@@ -1,5 +1,5 @@
 """
-Read SQL scripts, apply formatting (apply values to formatted string), 
+Read SQL scripts, apply values to formatted string, 
 run query and write df results to specifically named csv (for excel reading)
 """
 
