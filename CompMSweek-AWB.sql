@@ -1,5 +1,5 @@
 /*
-Feeder MarketShare: Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination group.
+AWB MarketShare: Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination group.
 */
 
 -- WeeklyReport shows info from currentweek-back_weeks (python input)
@@ -28,7 +28,7 @@ WITH cookie2 AS (
         Year,
         Semana,
         RelWeek,
-        -- define groups according to different origin-destination concepts
+        -- define groups according to different origin-destination concepts (AWB)
         CASE 
             WHEN ZonaOrigenAWB = 'NA_USA_Florida' Then 'FL'
             WHEN ZonaOrigenAWB IN ('NA_Canada', 'NA_USA_Midwest', 'NA_USA_NorthEast', 'NA_USA_South', 'NA_USA_SouthEast') Then 'GSA NA'
