@@ -1,5 +1,5 @@
 /*
-AWB MarketShare: Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination group.
+Feeder MarketShare: Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination group.
 */
 
 -- WeeklyReport shows info from currentweek-back_weeks (python input)
@@ -24,7 +24,7 @@ WITH cookie2 AS (
         Year,
         Semana,
         RelWeek,
-        -- TODO define groups according to different origin-destination concepts (AWB)
+        -- TODO define groups according to different origin-destination concepts (Feeder)
         CASE 
             WHEN RegionOrigenAWB = 'Europe' THEN 'EUR'
             ELSE 'Otros' 
