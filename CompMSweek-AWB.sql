@@ -2,7 +2,7 @@
 AWB MarketShare: Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination group.
 */
 
--- WeeklyReport shows info from current week-1
+-- WeeklyReport shows info from currentweek-back_weeks (python input)
 DECLARE Week0 INT64 DEFAULT EXTRACT(ISOWEEK FROM CURRENT_DATE())-{back_weeks};
 -- How many competitors to show per Origins (LA, +4 if NotAsia | + 9 if Asia, others), threshold
 DECLARE CompShow INT64 DEFAULT 5;
