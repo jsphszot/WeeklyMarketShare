@@ -11,8 +11,8 @@ SharedFolderLatam=r"\\3kusmiafs02.amn.lan.com\CAPACITY\Planificacion y Analisis 
 ProcessFolder=r"C:\SchTasks\CompMercadosWeek"
 # ProcessFolder=r"G:\My Drive\schTasks\CompMercadosWeek"
 
-# jsongcpauthfile=r"C:\SchTasks\ed-cm-caranalytics-dev-5b92456dcdac.json"
-jsongcpauthfile=ProcessFolder+r"\ed-cm-caranalytics-dev-a0ccf4ab0bce.json" # js
+# jsongcpauthfile=r"C:\SchTasks\credentials.json"
+jsongcpauthfile=ProcessFolder+r"\credentials.json" # js
 
 backweeks=input("Please provide backweeks:")
 
