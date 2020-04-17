@@ -2,16 +2,20 @@
 Feeder MarketShare: Takes Market info for Cargo tons, calculates weekly MarketShare for LA and top competitors per Origin-Destination group.
 */
 
--- WeeklyReport shows info from currentweek-back_weeks (python input)
+-- WeeklyReport shows info from currentweek- back_weeks (python input)
 DECLARE Week0 INT64 DEFAULT EXTRACT(ISOWEEK FROM CURRENT_DATE())-{back_weeks};
 -- How many competitors to show per Origins (LA, +4 if NotAsia | + 9 if Asia, others), threshold
-DECLARE CompShow INT64 DEFAULT 5;
+DECLARE NotAsiaComp INT64 DEFAULT 5;
+DECLARE AsiaComp INT64 DEFAULT 10;
 
 -- Common table expression, process later forks into two tables based on cookie2 (LA records and all other)
 WITH cookie2 AS (
     SELECT 
-    -- TODO (apply correct concat for Grupo)
-    CONCAT(Origen, ' - ', Destino) AS Grupo,
+    CASE 
+    -- TODO set correct PAX/CAO groups
+    WHEN Origen = 'FL' AND Destino = 'CHILE' AND TipoVuelo = 'PAX' Then 'FL - CHILE PAX'
+    ELSE CONCAT(Origen, ' - ', Destino)
+    END AS Grupo,
     Owner,
     -- due to two week lag for data from Brasil make each Week (W, WmX) column equal to current week minus 2 for GRU and VCP destinations.
     sum(IF ((RelWeek=week0-0-2 AND Destino IN ('VCP', 'GRU')) OR (Destino NOT IN ('VCP', 'GRU') AND RelWeek=week0-0), Tons, 0)) AS W,
@@ -24,9 +28,25 @@ WITH cookie2 AS (
         Year,
         Semana,
         RelWeek,
-        -- TODO define groups according to different origin-destination concepts (Feeder)
+        -- define groups according to different origin-destination concepts (Feeder)
         CASE 
-            WHEN RegionOrigenAWB = 'Europe' THEN 'EUR'
+            WHEN ZonaOrigenAWB = 'NA_USA_Florida' Then 'FL'
+            WHEN ZonaOrigenAWB IN ('NA_Canada', 'NA_USA_Midwest', 'NA_USA_NorthEast', 'NA_USA_South', 'NA_USA_SouthEast') Then 'GSA NA'
+            WHEN ZonaOrigenAWB = 'NA_USA_NewYork' Then 'JFK'
+            WHEN ZonaOrigenAWB = 'NA_USA_West' Then 'WEST'
+            WHEN ZonaOrigenAWB = 'AS_India' Then 'INDIA'
+            WHEN (RegionOrigenAWB = 'Asia' AND ZonaOrigenAWB != 'AS_India') Then 'ASIA'
+            WHEN PaisOrigenAWB = 'MEXICO' Then 'MEX'
+            When RegionOrigenAWB = 'Oceania' Then 'OCEANIA'
+            WHEN PaisOrigenAWB = 'ALEMANIA' Then 'DE'
+            WHEN PaisOrigenAWB = 'ESPANA' Then 'ES'
+            WHEN PaisOrigenAWB = 'PAISES BAJOS' Then 'NL'
+            WHEN PaisOrigenAWB = 'ITALIA' Then 'IT'
+            WHEN PaisOrigenAWB = 'FRANCIA' Then 'FR'
+            WHEN PaisOrigenAWB = 'BELGICA' Then 'BE'
+            WHEN PaisOrigenAWB = 'REINO UNIDO' Then 'UK'
+            WHEN PaisOrigenAWB IN ('DINAMARCA' , 'SUECIA', 'FINLANDIA', 'NORUEGA') Then 'SK'
+            WHEN RegionOrigenAWB = 'Europe' Then 'OTROS EU'
             ELSE 'Otros' 
         END AS Origen,
         -- main destinations for SouthBound flights, Chile and Brasil (GRU, VCP, LIM)
@@ -44,6 +64,24 @@ WITH cookie2 AS (
     WHERE Origen != 'Otros' AND Destino != 'Otros'
     GROUP BY 1,2
     ORDER BY 1,3 DESC
+),
+cookie3 AS (
+    SELECT 
+    *,
+    CASE
+        WHEN Grupo NOT LIKE 'ASIA%' AND ROW_NUMBER() OVER (PARTITION BY Grupo ORDER BY W DESC) >= NotAsiaComp Then 'Otros'
+        WHEN ROW_NUMBER() OVER (PARTITION BY Grupo ORDER BY W DESC) >= AsiaComp Then 'Otros'
+        ELSE Owner
+    END AS OwnerGrpd
+    FROM cookie2
+    WHERE Owner != 'LA'
+), 
+cookie3LA AS (
+    SELECT 
+    *,
+    Owner AS OwnerGrpd
+    FROM cookie2
+    WHERE Owner = 'LA'
 )
 
 SELECT
@@ -65,11 +103,10 @@ Wm4
 FROM (
 
     /*
-    Here we split cookie2 into two tables: one where Owner='LA', and all the other Owner in the second table.
-    Remember we always want to show the LA grouping in our final table no matter how low the MarketShare
-    LA is ranked as 0, All other owners are ranked according to last week's tons (W) per Grupo and tagged as 'Otros' if 
+    LA is ranked as 0, Otros as 99, all other owners are ranked according to last week's tons (W) per Grupo and tagged as 'Otros' if 
     ranked below threshold. Both tables are then appended to each other.
     */
+    
     SELECT 
     ROW_NUMBER() OVER (PARTITION BY Grupo ORDER BY sum(W) DESC) AS Rank,
     Grupo,
@@ -79,16 +116,24 @@ FROM (
     sum(Wm2) as Wm2,
     sum(Wm3) as Wm3,
     sum(Wm4) as Wm4
-    FROM (
-        SELECT 
-        *,
-        CASE
-            WHEN ROW_NUMBER() OVER (PARTITION BY Grupo ORDER BY W DESC) >= CompShow Then 'Otros'
-            ELSE Owner
-        END AS OwnerGrpd
-        FROM cookie2
-        WHERE Owner != 'LA'
-        ) AS cookie3
+    FROM cookie3
+    WHERE OwnerGrpd != 'Otros'
+    GROUP BY 2,3
+
+    UNION ALL
+    
+    -- Otros assign rank to 99 (always last in list yet included)  
+    SELECT 
+    99 AS Rank,
+    Grupo,
+    OwnerGrpd,
+    sum(W) as W,
+    sum(Wm1) as Wm1,
+    sum(Wm2) as Wm2,
+    sum(Wm3) as Wm3,
+    sum(Wm4) as Wm4
+    FROM cookie3
+    WHERE OwnerGrpd = 'Otros'
     GROUP BY 2,3
 
     UNION ALL
@@ -102,13 +147,7 @@ FROM (
     sum(Wm2) as Wm2,
     sum(Wm3) as Wm3,
     sum(Wm4) as Wm4
-    FROM (
-        SELECT 
-        *,
-        Owner AS OwnerGrpd
-        FROM cookie2
-        WHERE Owner = 'LA'
-        ) AS cookie3LA
+    FROM cookie3LA
     GROUP BY 2,3
 
 ) FinalCookie
